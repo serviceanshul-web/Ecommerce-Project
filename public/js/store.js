@@ -4,11 +4,109 @@
 const CART_STORAGE_KEY = "atelier_cart_v1";
 const WISHLIST_STORAGE_KEY = "atelier_wishlist_v1";
 const THEME_STORAGE_KEY = "atelier_theme_v1";
+const PROFILE_STORAGE_KEY = "atelier_profile_v1";
+const ORDERS_STORAGE_KEY = "atelier_orders_v1";
+
+const DEFAULT_PROFILE = {
+  fullName: "Julian Vance",
+  email: "julian.vance@atelier-private.com",
+  phone: "+1 (555) 382-9901",
+  tier: "Gold Atelier Patron",
+  memberSince: "October 2024",
+  avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+  addresses: [
+    {
+      id: "addr-01",
+      label: "Manhattan Residence",
+      fullName: "Julian Vance",
+      address: "740 Mercer Street, Apt 4B",
+      city: "New York",
+      postalCode: "10012",
+      country: "United States",
+      isDefault: true
+    },
+    {
+      id: "addr-02",
+      label: "Tribeca Design Studio",
+      fullName: "Julian Vance",
+      address: "142 Franklin Street, Floor 3",
+      city: "New York",
+      postalCode: "10013",
+      country: "United States",
+      isDefault: false
+    }
+  ],
+  paymentMethods: [
+    {
+      id: "pm-01",
+      cardType: "Visa",
+      last4: "8821",
+      exp: "08/28",
+      holder: "Julian Vance",
+      isDefault: true
+    },
+    {
+      id: "pm-02",
+      cardType: "Mastercard",
+      last4: "4019",
+      exp: "11/27",
+      holder: "Julian Vance",
+      isDefault: false
+    }
+  ],
+  preferences: {
+    topSize: "M",
+    bottomSize: "L",
+    shoeSize: "43 EU / 10 US",
+    newsletter: true,
+    privateDrops: true
+  }
+};
+
+const DEFAULT_ORDERS = [
+  {
+    orderId: "ORD-94A1F2",
+    trackingNumber: "ATL-783921045",
+    createdAt: "2026-10-12T14:32:00.000Z",
+    status: "Delivered",
+    estimatedDelivery: "Delivered on Wednesday, Oct 14",
+    customer: {
+      fullName: "Julian Vance",
+      email: "julian.vance@atelier-private.com",
+      address: "740 Mercer Street, Apt 4B",
+      city: "New York",
+      country: "United States"
+    },
+    deliveryOption: "priority",
+    paymentMethod: "card",
+    items: [
+      {
+        productId: "prod-001",
+        name: "Architectural Wool Overcoat",
+        price: 380,
+        selectedColor: "Charcoal Slate",
+        selectedSize: "M",
+        quantity: 1,
+        image: "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=900&q=80"
+      }
+    ],
+    pricing: {
+      subtotal: 380,
+      discount: 38,
+      shipping: 0,
+      tax: 27,
+      total: 369
+    }
+  }
+];
 
 class Store {
   constructor() {
     this.cart = this.loadFromStorage(CART_STORAGE_KEY, []);
     this.wishlist = new Set(this.loadFromStorage(WISHLIST_STORAGE_KEY, []));
+    this.profile = this.loadFromStorage(PROFILE_STORAGE_KEY, DEFAULT_PROFILE);
+    this.orders = this.loadFromStorage(ORDERS_STORAGE_KEY, DEFAULT_ORDERS);
+    this.currentView = "catalog"; // 'catalog' | 'profile'
     this.appliedCoupon = null; // { code: 'WELCOME10', discountPercent: 10 }
     this.freeShippingThreshold = 250; // Free shipping over $250
     this.standardShippingFee = 15;
@@ -280,6 +378,131 @@ class Store {
   applyTheme(theme) {
     document.documentElement.setAttribute("data-bs-theme", theme);
     document.documentElement.setAttribute("data-theme", theme);
+  }
+
+  // --- View Navigation ---
+  setView(viewName) {
+    this.currentView = viewName;
+    this.emit("store:view-changed", { view: viewName });
+  }
+
+  // --- Profile Operations ---
+  getProfile() {
+    return this.profile;
+  }
+
+  updateProfile(updates) {
+    this.profile = {
+      ...this.profile,
+      ...updates,
+      preferences: {
+        ...this.profile.preferences,
+        ...(updates.preferences || {})
+      }
+    };
+    this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.emit("store:profile-updated", this.profile);
+    this.emit("store:toast", {
+      message: "Personal atelier profile details saved.",
+      type: "success"
+    });
+  }
+
+  addAddress(addressData) {
+    const newAddress = {
+      id: "addr-" + Math.random().toString(36).substring(2, 7),
+      isDefault: this.profile.addresses.length === 0,
+      ...addressData
+    };
+    if (newAddress.isDefault) {
+      this.profile.addresses.forEach(a => { a.isDefault = false; });
+    }
+    this.profile.addresses.push(newAddress);
+    this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.emit("store:profile-updated", this.profile);
+    this.emit("store:toast", {
+      message: `Address "${newAddress.label}" added to your account.`,
+      type: "success"
+    });
+  }
+
+  deleteAddress(addressId) {
+    this.profile.addresses = this.profile.addresses.filter(a => a.id !== addressId);
+    if (this.profile.addresses.length > 0 && !this.profile.addresses.some(a => a.isDefault)) {
+      this.profile.addresses[0].isDefault = true;
+    }
+    this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.emit("store:profile-updated", this.profile);
+    this.emit("store:toast", {
+      message: "Shipping address removed.",
+      type: "info"
+    });
+  }
+
+  setDefaultAddress(addressId) {
+    this.profile.addresses.forEach(a => {
+      a.isDefault = a.id === addressId;
+    });
+    this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.emit("store:profile-updated", this.profile);
+    this.emit("store:toast", {
+      message: "Default delivery destination updated.",
+      type: "success"
+    });
+  }
+
+  addPaymentMethod(cardData) {
+    const newCard = {
+      id: "pm-" + Math.random().toString(36).substring(2, 7),
+      isDefault: this.profile.paymentMethods.length === 0,
+      ...cardData
+    };
+    if (newCard.isDefault) {
+      this.profile.paymentMethods.forEach(p => { p.isDefault = false; });
+    }
+    this.profile.paymentMethods.push(newCard);
+    this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.emit("store:profile-updated", this.profile);
+    this.emit("store:toast", {
+      message: "Payment card encrypted and saved to wallet.",
+      type: "success"
+    });
+  }
+
+  deletePaymentMethod(cardId) {
+    this.profile.paymentMethods = this.profile.paymentMethods.filter(p => p.id !== cardId);
+    if (this.profile.paymentMethods.length > 0 && !this.profile.paymentMethods.some(p => p.isDefault)) {
+      this.profile.paymentMethods[0].isDefault = true;
+    }
+    this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.emit("store:profile-updated", this.profile);
+    this.emit("store:toast", {
+      message: "Card removed from wallet.",
+      type: "info"
+    });
+  }
+
+  setDefaultPaymentMethod(cardId) {
+    this.profile.paymentMethods.forEach(p => {
+      p.isDefault = p.id === cardId;
+    });
+    this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.emit("store:profile-updated", this.profile);
+    this.emit("store:toast", {
+      message: "Primary payment method set.",
+      type: "success"
+    });
+  }
+
+  // --- Orders Operations ---
+  getOrders() {
+    return this.orders;
+  }
+
+  addOrder(order) {
+    this.orders.unshift(order);
+    this.saveToStorage(ORDERS_STORAGE_KEY, this.orders);
+    this.emit("store:orders-updated", this.orders);
   }
 }
 

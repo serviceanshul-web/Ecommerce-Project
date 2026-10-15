@@ -16,6 +16,11 @@ export function renderNavbar(containerId) {
 
         <!-- Mobile Toggles Container -->
         <div class="d-flex align-items-center gap-2 d-lg-none ms-auto me-2">
+          <!-- Profile Mobile -->
+          <button class="btn-icon-action" id="btn-profile-mobile" aria-label="Client Profile" title="Client Profile & Orders">
+            <i class="bi bi-person"></i>
+          </button>
+
           <!-- Wishlist Mobile -->
           <button class="btn-icon-action" id="btn-wishlist-mobile" aria-label="Wishlist">
             <i class="bi bi-heart"></i>
@@ -75,6 +80,11 @@ export function renderNavbar(containerId) {
               <i class="bi bi-moon-stars" id="theme-icon"></i>
             </button>
 
+            <!-- User Profile Button (Desktop) -->
+            <button class="btn-icon-action d-none d-lg-inline-flex" id="btn-profile-desktop" title="Client Profile & Purchases" aria-label="Client Profile">
+              <i class="bi bi-person"></i>
+            </button>
+
             <!-- Wishlist Button (Desktop) -->
             <button class="btn-icon-action d-none d-lg-inline-flex" id="btn-wishlist-desktop" title="Wishlist" aria-label="Wishlist">
               <i class="bi bi-heart"></i>
@@ -97,11 +107,27 @@ export function renderNavbar(containerId) {
 }
 
 function setupNavbarListeners() {
+  // Brand logo returns to catalog
+  document.getElementById("brand-home-link")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    store.setView("catalog");
+  });
+
+  // Profile button triggers
+  const openProfile = (e) => {
+    e.preventDefault();
+    store.setView("profile");
+  };
+
+  document.getElementById("btn-profile-desktop")?.addEventListener("click", openProfile);
+  document.getElementById("btn-profile-mobile")?.addEventListener("click", openProfile);
+
   // Category links click
   const navLinks = document.querySelectorAll(".nav-link-custom");
   navLinks.forEach(link => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
+      store.setView("catalog");
       navLinks.forEach(l => l.classList.remove("active"));
       link.classList.add("active");
       const category = link.getAttribute("data-category");
@@ -115,6 +141,14 @@ function setupNavbarListeners() {
     });
   });
 
+  // Sync profile active state
+  window.addEventListener("store:view-changed", (e) => {
+    const isProfile = e.detail.view === "profile";
+    document.getElementById("btn-profile-desktop")?.classList.toggle("text-warning", isProfile);
+    document.getElementById("btn-profile-desktop")?.classList.toggle("border-warning", isProfile);
+    document.getElementById("btn-profile-mobile")?.classList.toggle("text-warning", isProfile);
+  });
+
   // Debounced Search listener
   const searchInput = document.getElementById("global-search-input");
   let debounceTimer;
@@ -122,6 +156,7 @@ function setupNavbarListeners() {
     searchInput.addEventListener("input", (e) => {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
+        store.setView("catalog");
         store.setFilter("searchQuery", e.target.value);
       }, 250);
     });

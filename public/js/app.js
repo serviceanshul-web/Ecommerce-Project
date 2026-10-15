@@ -11,6 +11,7 @@ import { initCartDrawer } from "./components/cartDrawer.js";
 import { initWishlistModal } from "./components/wishlistModal.js";
 import { initCheckoutModal } from "./components/checkoutModal.js";
 import { initLookbookModal } from "./components/lookbookModal.js";
+import { renderProfilePage } from "./components/profilePage.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   // 1. Initialize Global UI Services
@@ -26,7 +27,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // 3. Render Catalog Grid
   renderProductGrid("product-grid-root");
 
-  // 4. Initialize Modals & Drawers
+  // 4. Render User Profile View
+  renderProfilePage("profile-view");
+
+  // 5. Initialize Modals & Drawers
   initProductModal();
   initSizeGuideModal();
   initCartDrawer();
@@ -34,7 +38,33 @@ document.addEventListener("DOMContentLoaded", () => {
   initCheckoutModal();
   initLookbookModal();
 
-  // 5. Wire Store Reactive Events
+  // 6. View Switcher Controller (SPA decoupled routing)
+  const catalogView = document.getElementById("catalog-view");
+  const profileView = document.getElementById("profile-view");
+
+  const syncView = (viewName) => {
+    if (viewName === "profile") {
+      catalogView?.classList.add("d-none");
+      profileView?.classList.remove("d-none");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      history.replaceState(null, "", "#profile");
+    } else {
+      profileView?.classList.add("d-none");
+      catalogView?.classList.remove("d-none");
+      history.replaceState(null, "", "#catalog");
+    }
+  };
+
+  window.addEventListener("store:view-changed", (e) => {
+    syncView(e.detail.view);
+  });
+
+  // Handle direct hash navigation
+  if (window.location.hash === "#profile") {
+    store.setView("profile");
+  }
+
+  // 7. Wire Store Reactive Events
   window.addEventListener("store:filter-updated", () => {
     renderProductGrid("product-grid-root");
   });

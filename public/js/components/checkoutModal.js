@@ -381,6 +381,7 @@ export function initCheckoutModal() {
       const result = await api.submitOrder(payload);
       if (result.success) {
         orderResult = result.order;
+        store.addOrder(result.order);
         currentStep = 4;
         store.clearCart();
         renderModal();

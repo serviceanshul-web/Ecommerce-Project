@@ -28,28 +28,34 @@
   <!-- Sticky Navbar Mount Point -->
   <div id="navbar-root"></div>
 
-  <!-- Editorial Hero Mount Point -->
-  <div id="hero-root"></div>
+  <!-- Catalog View (Hero + Faceted Grid) -->
+  <div id="catalog-view">
+    <!-- Editorial Hero Mount Point -->
+    <div id="hero-root"></div>
 
-  <!-- Main Catalog Content Area -->
-  <main class="py-5" id="catalog-section">
-    <div class="container px-3 px-lg-5">
-      <!-- Category Pills & Sorting Bar Mount Point -->
-      <div id="filters-root"></div>
+    <!-- Main Catalog Content Area -->
+    <main class="py-5" id="catalog-section">
+      <div class="container px-3 px-lg-5">
+        <!-- Category Pills & Sorting Bar Mount Point -->
+        <div id="filters-root"></div>
 
-      <div class="row g-4 g-xl-5">
-        <!-- Desktop Faceted Filter Sidebar (Col-3) -->
-        <aside class="col-lg-3 d-none d-lg-block" aria-label="Catalog Filters">
-          <div id="sidebar-filters-root"></div>
-        </aside>
+        <div class="row g-4 g-xl-5">
+          <!-- Desktop Faceted Filter Sidebar (Col-3) -->
+          <aside class="col-lg-3 d-none d-lg-block" aria-label="Catalog Filters">
+            <div id="sidebar-filters-root"></div>
+          </aside>
 
-        <!-- Product Grid Area (Col-9) -->
-        <section class="col-12 col-lg-9" aria-label="Curated Pieces Catalog">
-          <div id="product-grid-root"></div>
-        </section>
+          <!-- Product Grid Area (Col-9) -->
+          <section class="col-12 col-lg-9" aria-label="Curated Pieces Catalog">
+            <div id="product-grid-root"></div>
+          </section>
+        </div>
       </div>
-    </div>
-  </main>
+    </main>
+  </div>
+
+  <!-- User Profile View (Client VIP Dashboard, Orders, Addresses, Payments) -->
+  <div id="profile-view" class="d-none"></div>
 
   <!-- Mobile Filters Offcanvas Drawer -->
   <div class="offcanvas offcanvas-start offcanvas-atelier" tabindex="-1" id="mobileFilterDrawer" aria-labelledby="mobileFilterDrawerLabel">
