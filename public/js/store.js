@@ -124,6 +124,37 @@ class Store {
 
     this.theme = localStorage.getItem(THEME_STORAGE_KEY) || "dark";
     this.applyTheme(this.theme);
+    this.syncWithBackend();
+  }
+
+  async syncWithBackend() {
+    try {
+      const res = await fetch("/api/orders");
+      if (res.ok) {
+        const serverOrders = await res.json();
+        if (Array.isArray(serverOrders) && serverOrders.length > 0) {
+          this.orders = serverOrders;
+          this.saveToStorage(ORDERS_STORAGE_KEY, this.orders);
+          this.emit("store:orders-updated", this.orders);
+        }
+      }
+    } catch (e) {
+      // quiet fallback to local storage
+    }
+
+    try {
+      const res = await fetch("/api/profile");
+      if (res.ok) {
+        const serverProfile = await res.json();
+        if (serverProfile && serverProfile.fullName) {
+          this.profile = serverProfile;
+          this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+          this.emit("store:profile-updated", this.profile);
+        }
+      }
+    } catch (e) {
+      // quiet fallback to local storage
+    }
   }
 
   loadFromStorage(key, fallback) {
@@ -391,6 +422,14 @@ class Store {
     return this.profile;
   }
 
+  saveProfileToBackend() {
+    fetch('/api/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(this.profile)
+    }).catch(err => console.warn('Backend profile sync failed:', err));
+  }
+
   updateProfile(updates) {
     this.profile = {
       ...this.profile,
@@ -401,6 +440,7 @@ class Store {
       }
     };
     this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.saveProfileToBackend();
     this.emit("store:profile-updated", this.profile);
     this.emit("store:toast", {
       message: "Personal atelier profile details saved.",
@@ -419,6 +459,7 @@ class Store {
     }
     this.profile.addresses.push(newAddress);
     this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.saveProfileToBackend();
     this.emit("store:profile-updated", this.profile);
     this.emit("store:toast", {
       message: `Address "${newAddress.label}" added to your account.`,
@@ -432,6 +473,7 @@ class Store {
       this.profile.addresses[0].isDefault = true;
     }
     this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.saveProfileToBackend();
     this.emit("store:profile-updated", this.profile);
     this.emit("store:toast", {
       message: "Shipping address removed.",
@@ -444,6 +486,7 @@ class Store {
       a.isDefault = a.id === addressId;
     });
     this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.saveProfileToBackend();
     this.emit("store:profile-updated", this.profile);
     this.emit("store:toast", {
       message: "Default delivery destination updated.",
@@ -462,6 +505,7 @@ class Store {
     }
     this.profile.paymentMethods.push(newCard);
     this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.saveProfileToBackend();
     this.emit("store:profile-updated", this.profile);
     this.emit("store:toast", {
       message: "Payment card encrypted and saved to wallet.",
@@ -475,6 +519,7 @@ class Store {
       this.profile.paymentMethods[0].isDefault = true;
     }
     this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.saveProfileToBackend();
     this.emit("store:profile-updated", this.profile);
     this.emit("store:toast", {
       message: "Card removed from wallet.",
@@ -487,6 +532,7 @@ class Store {
       p.isDefault = p.id === cardId;
     });
     this.saveToStorage(PROFILE_STORAGE_KEY, this.profile);
+    this.saveProfileToBackend();
     this.emit("store:profile-updated", this.profile);
     this.emit("store:toast", {
       message: "Primary payment method set.",

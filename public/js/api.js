@@ -12,17 +12,17 @@ const VALID_COUPONS = {
 
 class ApiService {
   constructor() {
-    this.useMock = true; // Flips to false when Express backend endpoints are live
+    this.useMock = false; // Connected to Express + SQLite3 REST API
     this.baseUrl = "/api";
   }
 
-  // Emulates realistic network latency for smooth UI loader handling
+  // Emulates network latency if falling back
   async delay(ms = 120) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
-   * Fetch filtered and sorted catalog of products
+   * Fetch filtered and sorted catalog of products from SQLite3
    */
   async getProducts(filters = {}) {
     if (!this.useMock) {
@@ -35,20 +35,18 @@ class ApiService {
         const res = await fetch(`${this.baseUrl}/products?${queryParams.toString()}`);
         if (res.ok) return await res.json();
       } catch (err) {
-        console.warn("Backend not yet reachable, falling back to client mock:", err);
+        console.warn("Backend not reachable, falling back to client mock:", err);
       }
     }
 
-    await this.delay(80);
+    await this.delay(60);
 
     let list = [...MOCK_PRODUCTS];
 
-    // Filter by Category
     if (filters.category && filters.category !== "All") {
       list = list.filter(p => p.category.toLowerCase() === filters.category.toLowerCase());
     }
 
-    // Filter by Search Query
     if (filters.searchQuery && filters.searchQuery.trim() !== "") {
       const q = filters.searchQuery.toLowerCase().trim();
       list = list.filter(p =>
@@ -60,31 +58,26 @@ class ApiService {
       );
     }
 
-    // Filter by Size
     if (filters.sizes && filters.sizes.length > 0) {
       list = list.filter(p =>
         p.sizes.some(s => filters.sizes.includes(s.size) && s.stock > 0)
       );
     }
 
-    // Filter by Max Price
     if (filters.maxPrice !== undefined) {
       list = list.filter(p => p.price <= filters.maxPrice);
     }
 
-    // Filter by In-Stock Only
     if (filters.inStockOnly) {
       list = list.filter(p => p.sizes.some(s => s.stock > 0));
     }
 
-    // Filter by Colors
     if (filters.colors && filters.colors.length > 0) {
       list = list.filter(p =>
         p.colors.some(c => filters.colors.some(fc => c.name.toLowerCase().includes(fc.toLowerCase())))
       );
     }
 
-    // Sort
     switch (filters.sortOption) {
       case "price-asc":
         list.sort((a, b) => a.price - b.price);
@@ -97,7 +90,6 @@ class ApiService {
         break;
       case "featured":
       default:
-        // Featured default
         break;
     }
 
@@ -105,7 +97,7 @@ class ApiService {
   }
 
   /**
-   * Fetch single product by ID
+   * Fetch single product by ID from SQLite3
    */
   async getProductById(id) {
     if (!this.useMock) {
@@ -113,7 +105,7 @@ class ApiService {
         const res = await fetch(`${this.baseUrl}/products/${id}`);
         if (res.ok) return await res.json();
       } catch (err) {
-        console.warn("Backend not yet reachable, falling back:", err);
+        console.warn("Backend not reachable, falling back:", err);
       }
     }
 
@@ -122,9 +114,22 @@ class ApiService {
   }
 
   /**
-   * Validate promo coupon
+   * Validate promo coupon against SQLite3 coupons table
    */
   async validateCoupon(code) {
+    if (!this.useMock) {
+      try {
+        const res = await fetch(`${this.baseUrl}/coupons/validate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code })
+        });
+        if (res.ok) return await res.json();
+      } catch (err) {
+        console.warn("Backend coupon check failed, falling back:", err);
+      }
+    }
+
     await this.delay(100);
     const upper = (code || "").trim().toUpperCase();
     if (VALID_COUPONS[upper]) {
@@ -134,7 +139,7 @@ class ApiService {
   }
 
   /**
-   * Submit Order
+   * Submit Order to Express & SQLite3 database
    */
   async submitOrder(orderPayload) {
     if (!this.useMock) {
@@ -146,13 +151,12 @@ class ApiService {
         });
         if (res.ok) return await res.json();
       } catch (err) {
-        console.warn("Backend not reachable for order submission, simulating local confirmation:", err);
+        console.warn("Backend order submission failed, falling back to local confirmation:", err);
       }
     }
 
     await this.delay(350);
 
-    // Simulate order creation
     const orderId = "ORD-" + Math.random().toString(36).substring(2, 8).toUpperCase();
     const trackingNumber = "ATL-" + Math.floor(100000000 + Math.random() * 900000000);
 
@@ -171,6 +175,54 @@ class ApiService {
         })
       }
     };
+  }
+
+  /**
+   * Upload an image to local uploads folder
+   */
+  async uploadImage(file) {
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch(`${this.baseUrl}/upload`, {
+        method: "POST",
+        body: formData
+      });
+      return await res.json();
+    } catch (err) {
+      console.error("Upload error:", err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Fetch User Profile from SQLite3
+   */
+  async getProfile() {
+    try {
+      const res = await fetch(`${this.baseUrl}/profile`);
+      if (res.ok) return await res.json();
+    } catch (err) {
+      console.warn("Failed fetching profile from backend:", err);
+    }
+    return null;
+  }
+
+  /**
+   * Update User Profile in SQLite3
+   */
+  async updateProfile(profileData) {
+    try {
+      const res = await fetch(`${this.baseUrl}/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profileData)
+      });
+      if (res.ok) return await res.json();
+    } catch (err) {
+      console.warn("Failed updating profile in backend:", err);
+    }
+    return null;
   }
 }
 
