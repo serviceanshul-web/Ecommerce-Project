@@ -1,0 +1,23 @@
+{
+  "name": "atelier-ecommerce",
+  "version": "1.0.0",
+  "description": "Decoupled apparel e-commerce web application with Bootstrap and luxury aesthetics",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "ecommerce",
+    "fashion",
+    "apparel",
+    "bootstrap",
+    "express",
+    "sqlite3"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.22.3"
+  }
+}
